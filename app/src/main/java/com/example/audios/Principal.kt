@@ -21,6 +21,8 @@ import android.media.MediaPlayer
 import android.widget.ArrayAdapter
 import android.widget.ListView
 import androidx.core.app.ActivityCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 
 class Principal : AppCompatActivity() {
 
@@ -32,9 +34,10 @@ class Principal : AppCompatActivity() {
     private var permissionToRecordAccepted = true
     private var permissions: Array<String> = arrayOf(Manifest.permission.RECORD_AUDIO)
     private val REQUEST_RECORD_AUDIO_PERMISSION = 200
-    private lateinit var listView: ListView
-    private lateinit var adapter: ArrayAdapter<String>
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: AudioAdapter
     private var audioList = mutableListOf<String>()
+    private val MAX_AUDIOS = 10
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -59,12 +62,10 @@ class Principal : AppCompatActivity() {
         ActivityCompat.requestPermissions(this, permissions, REQUEST_RECORD_AUDIO_PERMISSION)
         val handler = Handler(Looper.getMainLooper())
         var button: Button = findViewById(R.id.btnGrabar)
-        listView = findViewById(R.id.listView)
-        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, audioList)
-        listView.adapter = adapter
-
-        rutaAudio = File(this.filesDir, "audio.mp3")
-        rutaAudio.createNewFile()
+        recyclerView = findViewById(R.id.recyclerAudios)
+        adapter = AudioAdapter(this, audioList)
+        recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
 
         button.setOnTouchListener { _, event ->
             when (event.action) {
@@ -80,27 +81,14 @@ class Principal : AppCompatActivity() {
             true
         }
 
-        listView.setOnItemClickListener { _, _, position, _ ->
-            playAudio(audioList[position])
-        }
-
         var servidorAndroid = ServidorAndroid(this, adapter, audioList)
         servidorAndroid.Start()
     }
 
-    private fun playAudio(audioPath: String) {
-        try {
-            val mediaPlayer = MediaPlayer()
-            mediaPlayer.setDataSource(audioPath)
-            mediaPlayer.prepare()
-            mediaPlayer.start()
-        } catch (e: Exception){
-            Log.e(TAG, "Error al reproducir audio: ${e.message}")
-        }
-    }
-
     @RequiresApi(Build.VERSION_CODES.O)
     private fun startRecording() {
+        rutaAudio = File(this.filesDir, "audio_${System.currentTimeMillis()}.mp3")
+        rutaAudio.createNewFile()
 
         mediaRecorder = MediaRecorder()
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -152,6 +140,20 @@ class Principal : AppCompatActivity() {
         mediaRecorder.stop()
         mediaRecorder.release()
         connection()
+        AgregarAudio()
+    }
+
+    private fun AgregarAudio(){
+        adapter.setEnviado(true)
+        audioList.add(rutaAudio.absolutePath)
+        adapter.notifyDataSetChanged()
+
+        if (audioList.size > MAX_AUDIOS) {
+            val oldestAudio = File(audioList[0])
+            oldestAudio.delete()
+            audioList.removeAt(0)
+            adapter.notifyDataSetChanged()
+        }
     }
 }
 

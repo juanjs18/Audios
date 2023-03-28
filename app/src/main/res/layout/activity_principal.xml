@@ -16,8 +16,8 @@
         app:layout_constraintStart_toStartOf="parent"
         tools:ignore="MissingConstraints" />
 
-    <ListView
-        android:id="@+id/listView"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerAudios"
         android:layout_width="409dp"
         android:layout_height="629dp"
         app:layout_constraintEnd_toEndOf="parent"

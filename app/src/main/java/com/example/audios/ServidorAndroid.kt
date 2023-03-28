@@ -11,7 +11,7 @@ import java.net.Socket
 
 class ServidorAndroid(
     principal: Context,
-    adapter: ArrayAdapter<String>,
+    adapter: AudioAdapter,
     audioList: MutableList<String>
 ) {
 
@@ -20,7 +20,7 @@ class ServidorAndroid(
     private var context = principal
     private var adapter = adapter
     private var audioList = audioList
-    private val MAX_AUDIOS = 5
+    private val MAX_AUDIOS = 10
 
     public fun Start() {
         Thread(Runnable {
@@ -29,7 +29,7 @@ class ServidorAndroid(
                     socket = server.accept()
 
                     val inputStream = socket.getInputStream()
-                    val file = File(context.filesDir, "audio_${System.currentTimeMillis()}.3pg")
+                    val file = File(context.filesDir, "audio_${System.currentTimeMillis()}.mp3")
                     val fileOutputStream = FileOutputStream(file)
                     val bytes = ByteArray(1024)
                     var count: Int = 0
@@ -44,19 +44,24 @@ class ServidorAndroid(
                     inputStream?.close()
                     socket.close()
 
-                    audioList.add(file.absolutePath)
-                    adapter.notifyDataSetChanged()
-
-                    if (audioList.size > MAX_AUDIOS) {
-                        val oldestAudio = File(audioList[0])
-                        oldestAudio.delete()
-                        audioList.removeAt(0)
-                        adapter.notifyDataSetChanged()
-                    }
+                    AgregarAudio(file)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error al recibir audio: ${e.message}")
                 }
             }
         }).start()
+    }
+
+    private fun AgregarAudio(file: File){
+        adapter.setEnviado(false)
+        audioList.add(file.absolutePath)
+        adapter.notifyDataSetChanged()
+
+        if (audioList.size > MAX_AUDIOS) {
+            val oldestAudio = File(audioList[0])
+            oldestAudio.delete()
+            audioList.removeAt(0)
+            adapter.notifyDataSetChanged()
+        }
     }
 }
