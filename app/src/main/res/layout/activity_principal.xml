@@ -8,10 +8,23 @@
 
     <Button
         android:id="@+id/btnGrabar"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:text="Grabar"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="MissingConstraints" />
+
+    <EditText
+        android:id="@+id/editTextTextPersonName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Grabar"
-        tools:layout_editor_absoluteX="172dp"
-        tools:layout_editor_absoluteY="314dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="Name"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:layout_editor_absoluteY="71dp"
         tools:ignore="MissingConstraints" />
 </androidx.constraintlayout.widget.ConstraintLayout>
