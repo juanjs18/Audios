@@ -1,5 +1,6 @@
 package com.example.audios
 
+import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.util.Log
@@ -15,7 +16,7 @@ class ServidorAndroid(
     audioList: MutableList<String>
 ) {
 
-    private var server = ServerSocket(7878)
+    private val server = ServerSocket(7878)
     private var socket = Socket()
     private var context = principal
     private var adapter = adapter
@@ -52,16 +53,16 @@ class ServidorAndroid(
         }).start()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun AgregarAudio(file: File){
         adapter.setEnviado(false)
         audioList.add(file.absolutePath)
-        adapter.notifyDataSetChanged()
 
         if (audioList.size > MAX_AUDIOS) {
             val oldestAudio = File(audioList[0])
             oldestAudio.delete()
             audioList.removeAt(0)
-            adapter.notifyDataSetChanged()
         }
+        adapter.notifyDataSetChanged()
     }
 }

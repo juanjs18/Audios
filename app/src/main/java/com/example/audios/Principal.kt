@@ -9,10 +9,6 @@ import android.view.MotionEvent
 import android.widget.Button
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import java.io.DataOutputStream
-import java.io.File
-import java.io.FileInputStream
-import java.io.IOException
 import java.lang.Exception
 import java.net.Socket
 import android.Manifest
@@ -23,6 +19,8 @@ import android.widget.ListView
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.io.*
+import java.net.ServerSocket
 
 class Principal : AppCompatActivity() {
 
@@ -30,7 +28,7 @@ class Principal : AppCompatActivity() {
     private lateinit var socket: Socket
     private lateinit var dataOutputStream: DataOutputStream
     private var isRecording = false
-    private lateinit var rutaAudio: File
+    private lateinit var rutaAudioEnviado: File
     private var permissionToRecordAccepted = true
     private var permissions: Array<String> = arrayOf(Manifest.permission.RECORD_AUDIO)
     private val REQUEST_RECORD_AUDIO_PERMISSION = 200
@@ -38,6 +36,9 @@ class Principal : AppCompatActivity() {
     private lateinit var adapter: AudioAdapter
     private var audioList = mutableListOf<String>()
     private val MAX_AUDIOS = 10
+    private var server = ServerSocket(7878)
+    private var socketRecibidos = Socket()
+    private lateinit var rutaAudioRecibido: File
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -65,7 +66,9 @@ class Principal : AppCompatActivity() {
         recyclerView = findViewById(R.id.recyclerAudios)
         adapter = AudioAdapter(this, audioList)
         recyclerView.adapter = adapter
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        val layoutManager = LinearLayoutManager(this)
+        layoutManager.stackFromEnd = true
+        recyclerView.layoutManager = layoutManager
 
         button.setOnTouchListener { _, event ->
             when (event.action) {
@@ -81,14 +84,13 @@ class Principal : AppCompatActivity() {
             true
         }
 
-        var servidorAndroid = ServidorAndroid(this, adapter, audioList)
-        servidorAndroid.Start()
+        Start()
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun startRecording() {
-        rutaAudio = File(this.filesDir, "audio_${System.currentTimeMillis()}.mp3")
-        rutaAudio.createNewFile()
+        rutaAudioEnviado = File(this.filesDir, "audio_${System.currentTimeMillis()}.mp3")
+        rutaAudioEnviado.createNewFile()
 
         mediaRecorder = MediaRecorder()
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -96,7 +98,7 @@ class Principal : AppCompatActivity() {
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
         mediaRecorder.setAudioEncodingBitRate(16)
         mediaRecorder.setAudioSamplingRate(44100)
-        mediaRecorder.setOutputFile(rutaAudio.absolutePath)
+        mediaRecorder.setOutputFile(rutaAudioEnviado.absolutePath)
         mediaRecorder.setMaxDuration(20000)
         try {
             mediaRecorder.prepare()
@@ -127,9 +129,9 @@ class Principal : AppCompatActivity() {
 
     private fun sendAudio(): ByteArray {
 
-        var audioBytes = ByteArray(1024)
+        val audioBytes = ByteArray(1024)
         try {
-            return FileInputStream(rutaAudio).use { it.readBytes() }
+            return FileInputStream(rutaAudioEnviado).use { it.readBytes() }
         } catch (e: IOException){
             Log.e(TAG, "Error al enviar archivo de audio", e)
         }
@@ -140,20 +142,53 @@ class Principal : AppCompatActivity() {
         mediaRecorder.stop()
         mediaRecorder.release()
         connection()
-        AgregarAudio()
+        AgregarAudio(true, rutaAudioEnviado)
     }
 
-    private fun AgregarAudio(){
-        adapter.setEnviado(true)
-        audioList.add(rutaAudio.absolutePath)
-        adapter.notifyDataSetChanged()
-
+    @SuppressLint("NotifyDataSetChanged")
+    private fun AgregarAudio(respuesta: Boolean, ruta: File){
+        adapter.setEnviado(respuesta)
+        audioList.add(ruta.absolutePath)
         if (audioList.size > MAX_AUDIOS) {
             val oldestAudio = File(audioList[0])
             oldestAudio.delete()
             audioList.removeAt(0)
-            adapter.notifyDataSetChanged()
         }
+        adapter.notifyDataSetChanged()
+    }
+
+    fun Start() {
+        Thread(Runnable {
+            while (true) {
+                try {
+                    socketRecibidos = server.accept()
+
+                    rutaAudioRecibido = File(this.filesDir, "audio_${System.currentTimeMillis()}.wav")
+                    rutaAudioRecibido.createNewFile()
+
+                    val inputStream = socketRecibidos.getInputStream()
+                    val fileOutputStream = FileOutputStream(rutaAudioRecibido)
+                    val bytes = ByteArray(1024)
+                    var count: Int = 0
+
+                    do {
+                        count = inputStream.read(bytes)
+                        if (count > 0) fileOutputStream.write(bytes, 0, count)
+                    } while (count != -1)
+
+                    fileOutputStream.flush()
+                    fileOutputStream.close()
+                    inputStream?.close()
+                    socketRecibidos.close()
+
+                    runOnUiThread(Runnable{
+                        AgregarAudio(false, rutaAudioRecibido)
+                    })
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error al recibir audio: ${e.message}")
+                }
+            }
+        }).start()
     }
 }
 
