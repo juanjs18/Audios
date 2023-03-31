@@ -71,17 +71,11 @@ class AudioAdapter(
 
             playButton.setOnClickListener {
                 try {
-                    mediaPlayer = MediaPlayer()
-                    mediaPlayer!!.setDataSource(audioPath)
-                    mediaPlayer!!.prepare()
-                    mediaPlayer!!.setOnPreparedListener {
-                        mediaPlayer!!.start()
-                    }
-                      /*  .apply {
+                    mediaPlayer = MediaPlayer().apply {
                         setDataSource(audioPath)
                         prepare()
                         start()
-                    }*/
+                    }
                 } catch (e: IOException) {
                     e.printStackTrace()
                 }

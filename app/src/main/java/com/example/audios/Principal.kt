@@ -54,6 +54,14 @@ class Principal : AppCompatActivity() {
         if (!permissionToRecordAccepted) finish()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+
+        for (file in filesDir.listFiles()) {
+            file.delete()
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -111,7 +119,12 @@ class Principal : AppCompatActivity() {
     private fun connection(){
         Thread(Runnable {
             try {
-                socket = Socket("10.0.1.45", 7878)
+                while (true) {
+                    try {
+                        socket = Socket("10.0.1.45", 7878)
+                        break;
+                    } catch (e: Exception) {}
+                }
                 //192.168.176.1
                 //172.28.208.1
                 dataOutputStream = DataOutputStream(socket.getOutputStream())
@@ -163,7 +176,7 @@ class Principal : AppCompatActivity() {
                 try {
                     socketRecibidos = server.accept()
 
-                    rutaAudioRecibido = File(this.filesDir, "audio_${System.currentTimeMillis()}.wav")
+                    rutaAudioRecibido = File(this.filesDir, "audio_${System.currentTimeMillis()}.mp3")
                     rutaAudioRecibido.createNewFile()
 
                     val inputStream = socketRecibidos.getInputStream()
